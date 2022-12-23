@@ -1,23 +1,18 @@
-from bbrain.iac.ovh import BaseManifest
 from bbrain.iac.ovh.manifests.ip import (
     FirewallManifest,
     FirewallRuleManifest,
     FirewallSetManifest,
 )
 
-
-class UnknownManifest(Exception):
-    """Exception raised when a manifest is unknown"""
+from bbrain.iac.ovh.exceptions import UnknownManifest
 
 
-manifest_map = {
-    "firewall": FirewallManifest,
-    "firewallrule": FirewallRuleManifest,
-    "firewallset": FirewallSetManifest,
-}
-
-
-def manifest_factory(manifest: dict) -> BaseManifest:
+def manifest_factory(manifest: dict):
+    manifest_map = {
+        "firewall": FirewallManifest,
+        "firewallrule": FirewallRuleManifest,
+        "firewallset": FirewallSetManifest,
+    }
     manifest_kind = manifest.get("kind", "").lower()
 
     try:

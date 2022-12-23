@@ -7,8 +7,7 @@ from ipaddress import IPv4Address, IPv4Network
 from pythonjsonlogger.jsonlogger import JsonFormatter
 
 from bbrain.iac import BaseDataclass, json
-from bbrain.iac.ovh import BaseManifest
-from bbrain.iac.ovh.client import Client
+from bbrain.iac.ovh.manifests.base import BaseManifest
 from bbrain.iac.ovh.api.ip import (
     create_firewall,
     enable_firewall,
@@ -24,6 +23,8 @@ from bbrain.iac.ovh.models.ip import (
     FirewallOptionTCP,
     FirewallProtocolEnum,
 )
+
+from bbrain.iac.ovh.client import Client
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -53,18 +54,24 @@ class FirewallRuleManifest(BaseManifest, BaseDataclass):
         if self.protocol is FirewallProtocolEnum.tcp and not self.tcpOption:
             self.tcpOption = FirewallOptionTCP()
 
-    async def apply(self, client: Client, target: IPv4Address = IPv4Address(0)):
+    async def apply(
+        self,
+        client: Client,
+        target: IPv4Address = IPv4Address(0),
+        *,
+        overwrite: bool,
+        **kwargs,
+    ):
         resource = f"/ip/{target}/firewall/{target}/rule/{self.sequence}"
-
         logger.debug(self.__json__())
-        ids = await get_firewall_rules_ids(client, target)
-        rule = await get_firewall_rule(client, target, self.sequence)
-        if self == rule:
-            logger.info(f"Skipping existing rule.", extra={"resource": resource})
-            return
 
-        if self.sequence in ids:
+        rule = await get_firewall_rule(client, target, self.sequence)
+
+        if rule and overwrite:
             await delete_firewall_rule(client, target, self.sequence)
+        elif self == rule:
+            logger.info(f"Skipping identical rule.", extra={"resource": resource})
+            return
 
         await post_firewall_rule(client, target, self)
 
@@ -89,7 +96,7 @@ class FirewallManifest(BaseManifest, BaseDataclass):
     enabled: bool
     rules: List[FirewallRuleManifest]
 
-    async def apply(self, client: Client):
+    async def apply(self, client: Client, *, purge: bool, **kwargs):
         logger.info(f"Applying Firewall manifest for {self.ip}")
         self.properties = await get_firewall_properties(client, self.ip)
 
@@ -105,7 +112,12 @@ class FirewallManifest(BaseManifest, BaseDataclass):
             logger.info(f"Enabling firewall for {self.ip}")
             await enable_firewall(client, self.ip)
 
-        rules_coroutines = [r.apply(client, self.ip) for r in self.rules]
+        if purge:
+            ids = await get_firewall_rules_ids(client, self.ip)
+            purge_coroutines = [delete_firewall_rule(client, self.ip, id) for id in ids]
+            await asyncio.gather(*purge_coroutines)
+
+        rules_coroutines = [r.apply(client, self.ip, **kwargs) for r in self.rules]
         await asyncio.gather(*rules_coroutines)
 
 
@@ -115,7 +127,7 @@ class FirewallSetManifest(BaseManifest, BaseDataclass):
     rules: dict
     kind: str = "FirewallSet"
 
-    async def apply(self, client: Client):
+    async def apply(self, client: Client, **kwargs):
         logger.info("Applying FirewallSet manifest")
-        coroutines = [fw.apply(client) for fw in self.configs]
+        coroutines = [fw.apply(client, **kwargs) for fw in self.configs]
         await asyncio.gather(*coroutines)

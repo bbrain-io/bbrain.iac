@@ -1,5 +1,4 @@
 from aiohttp.client_exceptions import ClientResponseError
-from bbrain.iac.ovh.manifests import UnknownManifest
 
 # 400
 class HTTPBadRequest(ClientResponseError):
@@ -33,3 +32,7 @@ class HTTPConflict(ClientResponseError):
 
 class InvalidRegion(Exception):
     """Raised when region is not in `REGIONS`."""
+
+
+class UnknownManifest(Exception):
+    """Exception raised when a manifest is unknown"""

@@ -1,9 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 from ipaddress import IPv4Address
-from typing import Awaitable, Callable, List, Tuple
+from typing import List, TYPE_CHECKING
 
-
-from bbrain.iac.ovh.client import Client
 from bbrain.iac.ovh.exceptions import HTTPBadRequest, HTTPConflict, HTTPNotFound
 from bbrain.iac.ovh.models.ip import (
     FirewallIp,
@@ -11,32 +11,10 @@ from bbrain.iac.ovh.models.ip import (
     FirewallRuleStateEnum,
     FirewallStateEnum,
 )
+from bbrain.iac.ovh.api import wait_until
 
-
-def wait_until(
-    func: Callable[..., Awaitable],
-    params: Tuple,
-    expr: Callable[..., bool],
-    timeout: int = 100,
-    period: int = 2,
-):
-    """Run an asynchronous function until it succeeds.
-
-    Args:
-        func (Callable[..., Awaitable]): The function to run continuously
-        params (Tuple): The parameters to pass to the function
-        expr (Callable[..., bool]): An expression to determine if `func` succeeded.
-            It should take a single parameter and return a bool.
-            True to keep running, False to exit the loop.
-        timeout (int, optional): The timeout in seconds. Defaults to 100.
-        period (int, optional): How much time to wait between each iteration.
-    """
-
-    async def loop():
-        while expr(await func(*params)):
-            await asyncio.sleep(period)
-
-    return asyncio.wait_for(loop(), timeout)
+if TYPE_CHECKING:
+    from bbrain.iac.ovh.client import Client
 
 
 async def create_firewall(client: Client, ip: IPv4Address) -> None:
@@ -158,7 +136,9 @@ async def post_firewall_rule(
         raise
 
 
-async def delete_firewall_rule(client: Client, ip: IPv4Address, seq: int):
+async def delete_firewall_rule(
+    client: Client, ip: IPv4Address, seq: int, timeout: int = 180
+):
     """Delete a firewall rule
 
     Args:
@@ -171,8 +151,12 @@ async def delete_firewall_rule(client: Client, ip: IPv4Address, seq: int):
         return rule is not None and rule.state != FirewallRuleStateEnum.ok
 
     # Wait for rule to be in state Ok
-    await wait_until(get_firewall_rule, (client, ip, seq), rule_pending)
+    await wait_until(
+        get_firewall_rule, (client, ip, seq), rule_pending, timeout=timeout
+    )
     await client.delete(f"/ip/{ip}/firewall/{ip}/rule/{seq}")
 
     # Wait for rule to be deleted
-    await wait_until(get_firewall_rule, (client, ip, seq), rule_pending)
+    await wait_until(
+        get_firewall_rule, (client, ip, seq), rule_pending, timeout=timeout
+    )
