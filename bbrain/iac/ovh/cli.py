@@ -9,6 +9,7 @@ from bbrain.iac.ovh.api.dedicated import (
     post_dedicated_server_reboot,
     put_dedicated_server,
 )
+from bbrain.iac.ovh.api.ip import post_ip_move
 
 import click
 from ruamel.yaml import YAML
@@ -88,3 +89,12 @@ async def install(server: str, template: str, hostname: str, identity: str):
             sshKeyName=identity,
         )
         print(res)
+
+
+@ovh.command()
+@click.option("-s", "--service", required=True)
+@click.option("-i", "--ip", required=True)
+@sync
+async def move_ip(service: str, ip: str):
+    async with Client() as client:
+        await post_ip_move(client, ip, service)

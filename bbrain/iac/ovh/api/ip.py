@@ -160,3 +160,14 @@ async def delete_firewall_rule(
     await wait_until(
         get_firewall_rule, (client, ip, seq), rule_pending, timeout=timeout
     )
+
+
+async def post_ip_move(client: Client, ip: IPv4Address, target: str):
+    """Move an IP to a different service
+
+    Args:
+        client (Client): An OVH client
+        ip (IPv4Address): The IP address to move
+        target (str): The target service
+    """
+    await client.post(f"/ip/{ip}/move", json={"to": target})
