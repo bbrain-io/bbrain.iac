@@ -10,6 +10,7 @@ from bbrain.iac.ovh.models.ip import (
     FirewallNetworkRule,
     FirewallRuleStateEnum,
     FirewallStateEnum,
+    IpTask,
 )
 from bbrain.iac.ovh.api import wait_until
 
@@ -171,3 +172,44 @@ async def post_ip_move(client: Client, ip: IPv4Address, target: str):
         target (str): The target service
     """
     await client.post(f"/ip/{ip}/move", json={"to": target})
+
+
+async def get_ip_tasks(client: Client, ip: IPv4Address) -> List[int]:
+    """Get the list of tasks for an IP
+
+    Args:
+        client (Client): An OVH client
+        ip (IPv4Address): The IP address
+
+    Returns:
+        List[str]: The list of tasks
+    """
+    try:
+        async with client.get(f"/ip/{ip}/task") as res:
+            json_data = await res.json()
+    except HTTPNotFound:
+        return []
+
+    if not isinstance(json_data, list):
+        raise ValueError("Unexpected response. get_ip_tasks should return a list.")
+
+    json_data.sort()
+    return json_data
+
+
+async def get_ip_task(client: Client, ip: IPv4Address, task_id: str) -> IpTask | None:
+    """Get a task for an IP
+
+    Args:
+        client (Client): An OVH client
+        ip (IPv4Address): The IP address
+        task_id (str): The task id
+
+    Returns:
+        Task: The task
+    """
+    try:
+        async with client.get(f"/ip/{ip}/task/{task_id}", raise_for_status=True) as res:
+            return IpTask(**await res.json())
+    except HTTPNotFound:
+        return None

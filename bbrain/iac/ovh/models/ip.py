@@ -1,9 +1,9 @@
-from dataclasses import InitVar, dataclass
-from datetime import datetime
-from enum import auto
-from ipaddress import IPv4Address, IPv4Network
 import re
+from enum import auto
 from typing import List
+from datetime import datetime
+from dataclasses import dataclass
+from ipaddress import IPv4Address, IPv4Network
 
 from bbrain.iac import AutoEnum, BaseDataclass, r
 
@@ -71,6 +71,23 @@ class FirewallProtocolEnum(AutoEnum):
     udp = auto()
 
 
+class TaskStatusEnum(AutoEnum):
+    cancelled = auto()
+    customerError = auto()
+    doing = auto()
+    done = auto()
+    init = auto()
+    ovhError = auto()
+    todo = auto()
+
+
+class TaskFunctionEnum(AutoEnum):
+    changeRipeOrg = auto()
+    arinBlockReassign = auto()
+    checkAndReleaseIp = auto()
+    genericMoveFloatingIp = auto()
+
+
 class NetworkPort:
     def __init__(self, port: str | int) -> None:
         pass
@@ -125,3 +142,15 @@ class FirewallNetworkRule(BaseDataclass):
             data.pop(k, None)
 
         return data
+
+
+@dataclass
+class IpTask(BaseDataclass):
+    taskId: int
+    status: TaskStatusEnum
+    function: TaskFunctionEnum
+    comment: str | None = None
+    destination: IPv4Address | None = None
+    doneDate: datetime | None = r(parser=datetime.fromisoformat, default=None)
+    startDate: datetime | None = r(parser=datetime.fromisoformat, default=None)
+    lastUpdate: datetime | None = r(parser=datetime.fromisoformat, default=None)
