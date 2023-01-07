@@ -25,7 +25,7 @@ jobs:
 
       - name: Publish package (test)
         run: |
-          pdm publish
+          pdm publish || true
         env:
           PDM_PUBLISH_REPO: "https://test.pypi.org/simple"
           PDM_PUBLISH_USERNAME: "__token__"
