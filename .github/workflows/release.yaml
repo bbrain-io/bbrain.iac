@@ -19,6 +19,18 @@ jobs:
         with:
           python-version: 3.10
 
+      - name: Check that package version matches tag ref
+        run: |
+          [ "$(pdm show --version)" = "${{ github.ref }}" ]
+
+      - name: Publish package (test)
+        run: |
+          pdm publish
+        env:
+          PDM_PUBLISH_REPO: "https://test.pypi.org/simple"
+          PDM_PUBLISH_USERNAME: "__token__"
+          PDM_PUBLISH_PASSWORD: "${{ secrets.PYPI_TEST_TOKEN }}"
+
       # - name: Create Release
       #   uses: actions/create-release@main
       #   env:
