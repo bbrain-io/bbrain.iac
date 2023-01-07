@@ -9,16 +9,16 @@ from bbrain.iac.ovh.api.dedicated import (
     post_dedicated_server_reboot,
     put_dedicated_server,
 )
-from bbrain.iac.ovh.api.ip import post_ip_move
-
-import click
-from ruamel.yaml import YAML
-
+from bbrain.iac.ovh.api.ip import get_ip_task, get_ip_tasks, post_ip_move
 from bbrain.iac.ovh.client import Client
 from bbrain.iac.ovh.manifests import UnknownManifest, manifest_factory
 
 if TYPE_CHECKING:
     from bbrain.iac.ovh.manifests.base import BaseManifest
+
+import click
+from ruamel.yaml import YAML
+
 
 yaml = YAML()
 
@@ -97,4 +97,5 @@ async def install(server: str, template: str, hostname: str, identity: str):
 @sync
 async def move_ip(service: str, ip: str):
     async with Client() as client:
-        await post_ip_move(client, ip, service)
+        # await post_ip_move(client, ip, service)
+        print(await get_ip_tasks(client, ip))
