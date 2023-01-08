@@ -20,8 +20,6 @@ jobs:
 
       - name: Check that package version matches tag ref
         run: |
-          pdm show --version
-          echo "v$(pdm show --version) = ${{ github.ref_name }}"
           [ "v$(pdm show --version)" = "${{ github.ref_name }}" ]
         working-directory: ${{ github.workspace }}
 

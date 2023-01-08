@@ -138,4 +138,6 @@ temp.py
 type_info.json
 
 resources/
-old_schema_converter/
+schema_converter/
+config.example.yaml
+.spectral.yaml
